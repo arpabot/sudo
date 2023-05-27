@@ -1,0 +1,10 @@
+{
+  "ping": {
+    "description": "ぴんぽん",
+    "type": 1,
+    "error": "```\nError {0}```"
+  },
+  "_": {
+    "hello": "はろーわーるど"
+  } 
+}

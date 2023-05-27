@@ -1,0 +1,10 @@
+{
+  "ping": {
+    "description": "Ping Pong",
+    "type": 1,
+    "error": "```\nError {0}```"
+  },
+  "_": {
+    "hello": "Hello, World!"
+  }
+}
