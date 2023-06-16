@@ -1,10 +1,37 @@
 {
-  "ping": {
-    "description": "ぴんぽん",
+  "sudo": {
+    "description": "sudo モードに入ります。",
     "type": 1,
     "error": "```\nError {0}```"
   },
+  "exit": {
+    "description": "sudo モードから即座に終了します。",
+    "type": 1,
+    "error": "```\nError {0}```"
+  },
+  "visudo": {
+    "description": "sudoers ロールを編集します。",
+    "type": 1,
+    "options": [
+      {
+        "description": "sudoers ロール",
+        "name": "sudoers",
+        "required": true,
+        "type": 8
+      },
+      {
+        "description": "root ロール",
+        "name": "root",
+        "required": true,
+        "type": 8
+      }
+    ],
+    "error": "```\nError {0}```"
+  },
   "_": {
-    "hello": "はろーわーるど"
-  } 
+    "lecture": "あなたはシステム管理者から通常の講習を受けたはずです。\nこれは通常、以下の3点に要約されます:\n\n    #1) 他人のプライバシーを尊重すること。\n    #2) タイプする前に考えること。\n    #3) 大いなる力には大いなる責任が伴うこと。",
+    "fuck": "残念ですが、あなた は'/sudo' を 管理者 として このサーバー 上で実行することは許可されていません。",
+    "sudoersNotFound": "このサーバーには、sudoersが存在しません。'/visudo'でsudoersを設定してください。",
+    "badPermission": "許可されていない操作です。"
+  }
 }
