@@ -2,7 +2,14 @@
   "sudo": {
     "description": "Enter sudo mode.",
     "type": 1,
-    "error": "```\nError {0}```"
+    "error": "```\nError {0}```",
+    "options": [
+      {
+        "name": "forever",
+        "description": "The name represents the body",
+        "type": 5
+      }
+    ]
   },
   "exit": {
     "description": "Immediately exits from sudo mode.",
@@ -11,26 +18,51 @@
   },
   "visudo": {
     "description": "Edit the sudoers role.",
-    "type": 1,
+    "type": 2,
     "options": [
       {
-        "description": "Sudoers role",
-        "name": "sudoers",
-        "required": true,
-        "type": 8
+        "description": "Add sudoers role",
+        "name": "add",
+        "type": 1,
+        "options": [
+          {
+            "description": "Sudoers role",
+            "name": "sudoers",
+            "required": true,
+            "type": 8
+          },
+          {
+            "description": "Root role",
+            "name": "root",
+            "required": true,
+            "type": 8
+          }
+        ]
       },
       {
-        "description": "Root role",
-        "name": "root",
-        "required": true,
-        "type": 8
+        "description": "Show list of sudoers role",
+        "name": "list",
+        "type": 1
+      },
+      {
+        "description": "Delete sudoers role",
+        "name": "delete",
+        "type": 1,
+        "options": [
+          {
+            "description": "Role set id",
+            "name": "id",
+            "required": true,
+            "type": 3
+          }
+        ]
       }
     ],
     "error": "```\nError {0}```"
   },
   "_": {
     "lecture": "We trust you have received the usual lecture from the local System\nAdministrator. It usually boils down to these three things:\n\n    #1) Respect the privacy of others.\n    #2) Think before you type.\n    #3) With great power comes great responsibility.",
-    "fuck": "You are not in the sudoers list.  This incident will be reported.",
+    "fuck": "You are not in the sudoers list. This incident will be reported.",
     "sudoersNotFound": "There are no sudoers on this server. Please set sudoers with '/visudo'.",
     "badPermission": "Permission denied."
   }

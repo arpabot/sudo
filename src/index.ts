@@ -1,9 +1,10 @@
 import { Client } from "../cloudcord";
 import main from "./commands/main";
 import { raw } from "./config";
+import { all, deleteSudoer, getRoles, getSudoers } from "./lib/db/querier";
 
 globalThis.singleton = {
-  roles: {}
+  roles: {},
 };
 
 const handlers: ExportedHandler<Env> = {
@@ -22,36 +23,37 @@ const handlers: ExportedHandler<Env> = {
   },
 
   async scheduled(controller: ScheduledController, env: Env) {
-    const sudoing = await env.DB.prepare("SELECT * FROM sudoing").all<{
-      guild_id: string;
-      user_id: string;
-      role_id: string;
-      created_at: number;
-    }>();
+    const guilds = await all(env.DB);
 
-    for (const row of sudoing.results as unknown as {
-      guild_id: string;
-      user_id: string;
-      role_id: string;
-      created_at: number;
-    }[] || []) {
-      const diff = Date.now() - row.created_at;
-      if (diff > 1000 * 60 * 15) {
-        await fetch(
-          "https://discord.com/api/v9/guilds/" +
-            row.guild_id +
-            "/members/" +
-            row.user_id +
-            "/roles/" +
-            row.role_id,
-          {
-            headers: {
-              Authorization: "Bot " + env.token,
-            },
-            method: "DELETE",
-          }
-        ).catch(console.error);
-        await env.DB.prepare("DELETE FROM sudoing WHERE user_id = ?").bind(row.user_id).run().catch(console.error);
+    for (const guild of guilds.results) {
+      const sudoers = await getSudoers(env.DB, { guildId: guild.guildId });
+
+      for (const sudoer of sudoers.results) {
+        if (sudoer.expriesAt === 0) continue;
+
+        const diff = Date.now() - sudoer.expriesAt;
+
+        if (diff < 0) {
+          await fetch(
+            "https://discord.com/api/v9/guilds/" +
+              sudoer.guildId +
+              "/members/" +
+              sudoer.userId +
+              "/roles/" +
+              guild.rootRoleId,
+            {
+              headers: {
+                Authorization: "Bot " + env.token,
+              },
+              method: "DELETE",
+            }
+          ).catch(console.error);
+
+          await deleteSudoer(env.DB, {
+            guildId: guild.guildId,
+            userId: sudoer.userId,
+          });
+        }
       }
     }
   },

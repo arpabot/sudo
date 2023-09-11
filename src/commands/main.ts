@@ -1,53 +1,54 @@
 import {
-  APIApplicationCommandAttachmentOption,
+  APIApplicationCommandInteractionDataBooleanOption,
   APIApplicationCommandInteractionDataRoleOption,
+  APIApplicationCommandInteractionDataStringOption,
   APIApplicationCommandInteractionDataSubcommandOption,
   APIChatInputApplicationCommandGuildInteraction,
 } from "discord-api-types/v10";
 import { Client, reply } from "../../cloudcord";
 import config, { raw } from "../config";
-import { APIApplicationCommandInteraction } from "discord-api-types/v10";
-import { APIContextMenuGuildInteraction } from "discord-api-types/v10";
 import { APIMessageApplicationCommandGuildInteraction } from "discord-api-types/v10";
-import { get, set } from "../singleton";
+import {
+  createRole,
+  deleteRole,
+  getRole,
+  getRoles,
+  setSudoer,
+} from "../lib/db/querier";
 
 export default function (client: Client<Env, typeof raw>, env: Env) {
   class Main {
     @client.command(config.sudo)
-    async sudo(interaction: APIMessageApplicationCommandGuildInteraction) {
+    async sudo(interaction: APIChatInputApplicationCommandGuildInteraction) {
       const conf =
         raw[client.commands.toSupportedLocale(interaction.locale, raw)];
-      const role = await get(interaction.guild_id, env);
-      if (!role || !role.role_id)
+      const roles = await getRoles(env.DB, { guildId: interaction.guild_id });
+      const forever = interaction.data
+        .options![0] as APIApplicationCommandInteractionDataBooleanOption;
+
+      if (!roles || !roles.results.length)
         return reply({ content: conf._.sudoersNotFound });
 
-      if (interaction.member.roles.indexOf(role.role_id) !== -1)
-        return reply({
-          content: ":white_check_mark:",
-          ephemeral: true,
-        });
+      const role = roles.results.find((x) =>
+        interaction.member.roles.some((y) => x.sudoerRoleId === y)
+      );
 
-      await env.DB.prepare(
-        "INSERT INTO sudoing (user_id, guild_id, role_id, created_at) VALUES (?, ?, ?, ?)"
-      )
-        .bind(
-          interaction.member.user.id,
-          interaction.guild_id,
-          role?.role_id,
-          Date.now()
-        )
-        .run()
-        .catch(console.error);
+      if (!role) return reply({ content: conf._.fuck });
 
-      if (interaction.member.roles.indexOf(role.sudoer) === -1)
-        return reply({ content: conf._.fuck });
+      await setSudoer(env.DB, {
+        expriesAt: forever.value ? 0 : Date.now() + 15 * 60 * 1000,
+        guildId: interaction.guild_id,
+        userId: interaction.member.user.id,
+        roleId: role.id,
+      });
+
       await fetch(
         "https://discord.com/api/v9/guilds/" +
           interaction.guild_id +
           "/members/" +
           interaction.member.user.id +
           "/roles/" +
-          role.role_id,
+          role.rootRoleId,
         {
           headers: {
             Authorization: "Bot " + env.token,
@@ -63,37 +64,87 @@ export default function (client: Client<Env, typeof raw>, env: Env) {
     async visudo(interaction: APIChatInputApplicationCommandGuildInteraction) {
       const conf =
         raw[client.commands.toSupportedLocale(interaction.locale, raw)];
-      const role = await get(interaction.guild_id, env);
+      const roles = await getRoles(env.DB, {
+        guildId: interaction.guild_id,
+      });
+
+      if (!roles.results.length)
+        return reply({ content: conf._.fuck, ephemeral: true });
 
       if (
         (BigInt(interaction.member.permissions) & 8n) !== 8n &&
-        interaction.member.roles.indexOf(role?.role_id) === -1
+        interaction.member.roles.some((x) =>
+          roles.results.some((y) => x === y.sudoerRoleId)
+        )
       )
         return reply({ content: conf._.badPermission, ephemeral: true });
 
-      await set(
-        interaction.guild_id,
-        (
-          interaction.data
-            .options![1] as APIApplicationCommandInteractionDataRoleOption
-        ).value,
-        (
-          interaction.data
-            .options![0] as APIApplicationCommandInteractionDataRoleOption
-        ).value,
-        env
-      );
-      return reply({ content: ":white_check_mark:", ephemeral: true });
+      const subcommand = interaction.data
+        .options![0] as APIApplicationCommandInteractionDataSubcommandOption;
+
+      switch (subcommand.name) {
+        case "list": {
+          const roles = await getRoles(env.DB, {
+            guildId: interaction.guild_id,
+          });
+
+          return reply({
+            content: roles.results
+              .map(
+                (x) => `${x.id}:\n  <@&${x.sudoerRoleId}>: <@&${x.rootRoleId}>`
+              )
+              .join("\n"),
+          });
+        }
+
+        case "add": {
+          const sudoerRole =
+            subcommand.options![0] as APIApplicationCommandInteractionDataRoleOption;
+          const rootRole =
+            subcommand.options![0] as APIApplicationCommandInteractionDataRoleOption;
+
+          await createRole(env.DB, {
+            guildId: interaction.guild_id,
+            rootRoleId: rootRole.value,
+            sudoerRoleId: sudoerRole.value,
+          });
+
+          return reply({ content: ":white_check_mark:", ephemeral: true });
+        }
+
+        case "delete": {
+          const id =
+            subcommand.options![0] as APIApplicationCommandInteractionDataStringOption;
+
+          await deleteRole(env.DB, {
+            id: parseInt(id.value),
+          });
+
+          return reply({ content: ":white_check_mark:", ephemeral: true });
+        }
+
+        default: {
+          return reply({ content: "fuck", ephemeral: true });
+        }
+      }
     }
 
     @client.command(config.exit)
     async exit(interaction: APIMessageApplicationCommandGuildInteraction) {
       const conf =
         raw[client.commands.toSupportedLocale(interaction.locale, raw)];
-      const role = await get(interaction.guild_id, env);
-      if (!role || !role.role_id)
+      const roles = await getRoles(env.DB, {
+        guildId: interaction.guild_id,
+      });
+
+      if (!roles.results.length)
         return reply({ content: conf._.sudoersNotFound });
-      if (interaction.member.roles.indexOf(role.role_id) === -1)
+
+      const role = roles.results.find((x) =>
+        interaction.member.roles.some((y) => x.sudoerRoleId === y)
+      );
+
+      if (!role)
         return reply({ content: conf._.badPermission, ephemeral: true });
 
       await fetch(
@@ -102,7 +153,7 @@ export default function (client: Client<Env, typeof raw>, env: Env) {
           "/members/" +
           interaction.member.user.id +
           "/roles/" +
-          role.role_id,
+          role.rootRoleId,
         {
           headers: {
             Authorization: "Bot " + env.token,
