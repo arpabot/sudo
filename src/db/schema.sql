@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS
     guild_id TEXT NOT NULL,
     role_id INTEGER NOT NULL,
     expries_at INTEGER NOT NULL,
-    FOREIGN KEY (role_id) REFERENCES role (role_id)
+    FOREIGN KEY (role_id) REFERENCES role (id)
   );
 
 CREATE TABLE IF NOT EXISTS

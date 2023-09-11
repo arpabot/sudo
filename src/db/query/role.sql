@@ -1,5 +1,8 @@
 -- name: All :many
-SELECT * FROM role;
+SELECT
+  *
+FROM
+  role;
 
 -- name: GetRoles :many
 SELECT
@@ -27,4 +30,5 @@ VALUES
 -- name: DeleteRole :exec
 DELETE FROM role
 WHERE
-  id = @id;
+  id = @id
+  and guild_id = @guild_id;

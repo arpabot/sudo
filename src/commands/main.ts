@@ -24,7 +24,7 @@ export default function (client: Client<Env, typeof raw>, env: Env) {
         raw[client.commands.toSupportedLocale(interaction.locale, raw)];
       const roles = await getRoles(env.DB, { guildId: interaction.guild_id });
       const forever = interaction.data
-        .options![0] as APIApplicationCommandInteractionDataBooleanOption;
+        .options?.[0] as APIApplicationCommandInteractionDataBooleanOption;
 
       if (!roles || !roles.results.length)
         return reply({ content: conf._.sudoersNotFound });
@@ -33,13 +33,18 @@ export default function (client: Client<Env, typeof raw>, env: Env) {
         interaction.member.roles.some((y) => x.sudoerRoleId === y)
       );
 
+
       if (!role) return reply({ content: conf._.fuck });
 
       await setSudoer(env.DB, {
-        expriesAt: forever.value ? 0 : Date.now() + 15 * 60 * 1000,
+        expriesAt: forever?.value ? 0 : Date.now() + 15 * 60 * 1000,
         guildId: interaction.guild_id,
         userId: interaction.member.user.id,
         roleId: role.id,
+      }).catch(e => {
+        console.log(e);
+        console.log(e.message);
+        console.log(e.cause);
       });
 
       await fetch(
@@ -64,19 +69,8 @@ export default function (client: Client<Env, typeof raw>, env: Env) {
     async visudo(interaction: APIChatInputApplicationCommandGuildInteraction) {
       const conf =
         raw[client.commands.toSupportedLocale(interaction.locale, raw)];
-      const roles = await getRoles(env.DB, {
-        guildId: interaction.guild_id,
-      });
 
-      if (!roles.results.length)
-        return reply({ content: conf._.fuck, ephemeral: true });
-
-      if (
-        (BigInt(interaction.member.permissions) & 8n) !== 8n &&
-        interaction.member.roles.some((x) =>
-          roles.results.some((y) => x === y.sudoerRoleId)
-        )
-      )
+      if ((BigInt(interaction.member.permissions) & 8n) !== 8n)
         return reply({ content: conf._.badPermission, ephemeral: true });
 
       const subcommand = interaction.data
@@ -101,7 +95,7 @@ export default function (client: Client<Env, typeof raw>, env: Env) {
           const sudoerRole =
             subcommand.options![0] as APIApplicationCommandInteractionDataRoleOption;
           const rootRole =
-            subcommand.options![0] as APIApplicationCommandInteractionDataRoleOption;
+            subcommand.options![1] as APIApplicationCommandInteractionDataRoleOption;
 
           await createRole(env.DB, {
             guildId: interaction.guild_id,
@@ -118,6 +112,7 @@ export default function (client: Client<Env, typeof raw>, env: Env) {
 
           await deleteRole(env.DB, {
             id: parseInt(id.value),
+            guildId: interaction.guild_id
           });
 
           return reply({ content: ":white_check_mark:", ephemeral: true });

@@ -50,8 +50,8 @@
         "type": 1,
         "options": [
           {
-            "description": "sudoers ロール",
-            "name": "sudoers",
+            "description": "sudoersセット の id",
+            "name": "id",
             "required": true,
             "type": 8
           }

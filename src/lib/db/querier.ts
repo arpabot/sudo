@@ -6,7 +6,10 @@
 import { D1Database, D1Result } from "@cloudflare/workers-types/experimental"
 
 const allQuery = `-- name: All :many
-SELECT id, guild_id, sudoer_role_id, root_role_id FROM role`;
+SELECT
+  id, guild_id, sudoer_role_id, root_role_id
+FROM
+  role`;
 
 export type AllRow = {
   id: number;
@@ -153,10 +156,12 @@ export async function createRole(
 const deleteRoleQuery = `-- name: DeleteRole :exec
 DELETE FROM role
 WHERE
-  id = ?1`;
+  id = ?1
+  and guild_id = ?2`;
 
 export type DeleteRoleParams = {
   id: number;
+  guildId: string;
 };
 
 export async function deleteRole(
@@ -165,7 +170,7 @@ export async function deleteRole(
 ): Promise<D1Result> {
   return await d1
     .prepare(deleteRoleQuery)
-    .bind(args.id)
+    .bind(args.id, args.guildId)
     .run();
 }
 
