@@ -33,7 +33,7 @@ const handlers: ExportedHandler<Env> = {
 
         const diff = Date.now() - sudoer.expriesAt;
 
-        if (diff < 0) {
+        if (diff > 0) {
           await fetch(
             "https://discord.com/api/v9/guilds/" +
               sudoer.guildId +
